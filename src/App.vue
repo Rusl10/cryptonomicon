@@ -119,9 +119,9 @@ export default {
         }*/
 
 
-        const tickerData = localStorage.getItem("cryptonomicon-list")
-        if (tickerData) {
-            this.tickers = JSON.parse(tickerData)
+        const tickersData = localStorage.getItem("cryptonomicon-list")
+        if (tickersData) {
+            this.tickers = JSON.parse(tickersData)
             this.tickers.forEach(ticker => {
                 subscribeToTicker(ticker.name, newPrice =>
                     this.updateTicker(ticker.name, newPrice)
@@ -179,9 +179,9 @@ export default {
             this.tickers
                 .filter(t => t.name === tickerName)
                 .forEach(t => {
-                    /*if (t === this.selectedTicker) {
-this.graph.push(price);
-}*/
+                    if (t === this.selectedTicker) {
+                        this.graph.push(price)
+                    }
                     t.price = price;
                 });
         },
@@ -221,7 +221,6 @@ ticker.price = price || "-"
             subscribeToTicker(currentTicker.name, newPrice =>
                 this.updateTicker(currentTicker.name, newPrice)
             )
-
         },
         handleDelete(tickerToRemove) {
             this.tickers = this.tickers.filter(t => t !== tickerToRemove)
@@ -243,7 +242,6 @@ ticker.price = price || "-"
         },
         tickers(newValue, oldValue) {
             /* почему не срабатывает watch при добавлении ticker */
-            console.log(newValue === oldValue)
             localStorage.setItem("cryptonomicon-list", JSON.stringify(this.tickers))
         },
 
