@@ -47,7 +47,7 @@
                                 {{t.name}} - USD
                             </dt>
                             <dd class="mt-1 text-3xl font-semibold text-gray-900">
-                                {{t.price}}
+                                {{ formatPrice(t.price) }}
                             </dd>
                         </div>
                         <div class="w-full border-t border-gray-200"></div>
@@ -94,6 +94,9 @@
 // [x] График сломан если везде одинаковые значения
 // [x] При удалении тикера остается выбор
 
+
+import { subscribeToTicker, unsubscribeFromTicker, loadTickers } from './api.js'
+
 export default {
     name: "App",
     created() {
@@ -117,13 +120,17 @@ export default {
 
 
         const tickerData = localStorage.getItem("cryptonomicon-list")
-        console.log('tickerData', tickerData)
         if (tickerData) {
             this.tickers = JSON.parse(tickerData)
             this.tickers.forEach(ticker => {
-                this.subscribeToUpdates(ticker.name)
+                subscribeToTicker(ticker.name, newPrice =>
+                    this.updateTicker(ticker.name, newPrice)
+                )
             })
         }
+
+        setInterval(this.updateTickers, 5000)
+
     },
     data() {
         return {
@@ -168,20 +175,32 @@ export default {
     },
 
     methods: {
-        subscribeToUpdates(tickerName) {
-            setInterval(async () => {
-                const f = await fetch(`https://min-api.cryptocompare.com/data/price?fsym=${tickerName}&tsyms=USD&api_key=afb9ab817431d51ff5cedf9926c4ff24ffaece19ddad0985510799a253345913`)
-                const data = await f.json()
-                console.log('data', data)
-                this.tickers.find(t => t.name === tickerName).price = data.USD > 1 ? data.USD.toFixed(2) : data.USD.toPrecision(2)
-                if (this.sel && this.sel.name === tickerName) {
-                    this.graph.push(data.USD)
-                }
-            }, 3000)
-            this.ticker = ""
+        updateTicker(tickerName, price) {
+            this.tickers
+                .filter(t => t.name === tickerName)
+                .forEach(t => {
+                    /*if (t === this.selectedTicker) {
+this.graph.push(price);
+}*/
+                    t.price = price;
+                });
         },
-        comma() {
-            console.log('эполучилось')
+
+        formatPrice(price) {
+            if (price === "-") {
+                return price
+            }
+            return price > 1 ? price.toFixed(2) : price.toPrecision(2)
+        },
+        async updateTickers() {
+            /*if (!this.tickers.length) {
+return
+}
+this.tickers.forEach(ticker => {
+const price = exchangeData[ticker.name.toUpperCase()]
+ticker.price = price || "-"
+})*/
+
         },
         select(ticker) {
             this.selectedTicker = ticker
@@ -197,15 +216,19 @@ export default {
             const currentTicker = { name: this.ticker, price: "-" }
             /* Обновляем ссылку на массив this.tickers, чтобы сработал watcher и установил данные в localStorage */
             this.tickers = [...this.tickers, currentTicker]
+            this.ticker = ''
             this.filter = ""
+            subscribeToTicker(currentTicker.name, newPrice =>
+                this.updateTicker(currentTicker.name, newPrice)
+            )
 
-            this.subscribeToUpdates(currentTicker.name)
         },
         handleDelete(tickerToRemove) {
             this.tickers = this.tickers.filter(t => t !== tickerToRemove)
             if (this.selectedTicker === tickerToRemove) {
                 this.selectedTicker = null
             }
+            unsubscribeFromTicker(tickerToRemove.name)
         },
         pageStateOptions() {
             return {
